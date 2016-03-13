@@ -44,10 +44,38 @@ There's a gap in our strategies. What can we do when a file only needs repair, n
 
 ## Conserving a TIFF
 
-I don't want to stay in a land of hypotheticals, so let's make some images. Since browsers don't render TIFFs, I converted every TIFF to PNG. The originals are available in the [GitHub repository](https://github.com/nkrabben/ConservingTiffs/tree/gh-pages/images)
+To make this idea concrete, I'll create, break, and fix some TIFF images. All examples TIFFs are stored in the [GitHub repository](https://github.com/nkrabben/ConservingTiffs/tree/gh-pages/images). Ironically, most browsers don't render TIFFs, so here is a PNG of the TIFF I'm using.
 ![Base Example]({{ site.github.url }}/images/example.png)
 
-~~~~
+### Toolset
+To examine, break, and fix the TIFF, I'll use the following tools.
+
+[tiffdump](http://www.remotesensing.org/libtiff/man/tiffdump.1.html)
+: To view TIFF tags, installed by default on OS X
+[exiftool](http://www.sno.phy.queensu.ca/~phil/exiftool/)
+: To view and manipulate image metadata, installed via homebrew on OS X
+[ImageMagick](http://www.imagemagick.org/script/index.php)
+: To manipulate image files, installed via homebrew on OS X
+[Hex Fiend](http://ridiculousfish.com/hexfiend/)
+: To view and edit byte streams, installed via homebrew on OS X
+
+Most of these tools are run via a terminal. I'll use the following syntax for commands and results:
+
+~~~
+$ command arugment1 argurment2 etc...
+~~~
+~~~
+output
+...
+...
+~~~
+
+### Our Example TIFF Tags
+
+~~~
+$ tiffdump example.tiff
+~~~
+~~~
 example.tiff:
 Magic: 0x4d4d <big-endian> Version: 0x2a <ClassicTIFF>
 Directory 0: offset 397220 (0x60fa4) next 0 (0)
@@ -65,4 +93,4 @@ PlanarConfig (284) SHORT (3) 1<1>
 ExtraSamples (338) SHORT (3) 1<2>
 SampleFormat (339) SHORT (3) 4<1 1 1 1>
 ICC Profile (34675) UNDEFINED (7) 3144<00 00 0xc 0x48 0x4c 0x69 0x6e 0x6f 0x2 0x10 00 00 0x6d 0x6e 0x74 0x72 0x52 0x47 0x42 0x20 0x58 0x59 0x5a 0x20 ...>
-~~~~
+~~~
