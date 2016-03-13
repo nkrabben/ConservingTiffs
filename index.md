@@ -45,4 +45,4 @@ There's a gap in our strategies. What can we do when a file only needs repair, n
 ## Conserving a TIFF
 
 I don't want to stay in a land of hypotheticals, so let's make some images.
-![Base Example]({{ site.url }}/images/example.tiff)
+![Base Example]({{ site.github.url }}/images/example.tiff)
