@@ -157,6 +157,7 @@ In the middle of a stream of TIFFs produced by a digitization project, seemingly
 ~~~
 convert: example_broken.tiff: Bad value 0 for "Orientation" tag. `_TIFFVSetField' @ error/tiff.c/TIFFErrors/557.
 ~~~
+
 (Here, example_broken.tiff is a copy of example.tiff that I've purposefully broken.)
 
 The value of the Orientation tag describes if the image data should be rotated, mirrored, or rotated and mirrored. It's value can only be 1-8. When our ingest process tries to create derivatives of images with invalid orientation values, it purposely fails. If it doesn't know the orientation of the original image, it will not know how to orient the derivatives.
@@ -178,10 +179,56 @@ example.tiff example_broken_exiftool.tiff differ: char 6, line 1
 ~~~
 In addition to writing the metadata, `exiftool` is rewriting other parts of the data in the file. These rewrites are not always predictable. In my tests, I discovered one file where `exiftool` added a space into the value of the software tag, ie. "Seashore  0.1.9" instead of "Seashore 0.1.9". That example is both harmless and concerning.
 
-I haven't found any other tools that perform the surgical edit that I want, so I dove into the byte stream itself with a hex editor. 
+I haven't found any other tools that perform the surgical edit that I want, so the only way I can make the change I want to make is with a hex editor.
 
+### TIFF Tag Byte Code
+Inside a TIFF, tags are stored as 12 bytes. There are 400,586 bytes in example_broken.tiff. Finding the right twelve to fix requires three pieces of information from `tiffdump`.
+~~~
+example.tiff:
+Magic: 0x4d4d <big-endian> Version: 0x2a <ClassicTIFF>
+Directory 0: offset 397220 (0x60fa4) next 0 (0)
+...
+Orientation (274) SHORT (3) 1<1>
+...
+~~~
+1. The tag ID number (274) will be the first two bytes of the tag, converted into hex notation.
+2. The directory IFD offset (397220) is where the first byte of the entire IFD is.
+3. Big-endian means that values will be written big to small instead of small to big. In this case, 274 is represented as x0112. In a little-endian file, 274 would be represented as x1201.
 
+Opening example_broken.tiff in a hex editor and using these three pieces of information leads to this byte sequence starting after the 397,220th byte.
 
+~~~
+** ** ** **  ** ** ** **  ** ** 00 0E
+01 00 00 03  00 00 00 01  01 A3 00 00
+01 01 00 03  00 00 00 01  00 ED 00 00
+01 03 00 03  00 00 00 01  00 06 10 52
+01 03 00 03  00 00 00 01  00 01 00 00
+01 06 00 03  00 00 00 01  00 02 00 00
+01 11 00 04  00 00 00 04  00 06 10 6A
+01 12 00 03  00 00 00 01  00 00 00 00
+01 15 00 04  00 00 00 01  00 04 00 00
+...
+~~~
+I've hidden the values of bytes 397,210-397,220. The first two bytes of the IFD, x000e = 14, indicate the total number of tags (14). From the second line onward, each line shows twelve bytes, a complete tag.
 
+The twelve bytes of a TIFF tag are structured like this.
+* Byte 1-2 - Tag ID
+* Byte 3-4 - Data Type of tag value
+* Byte 5-7 - Number of tag values
+* Byte 8-12 - Tag value
 
-change completely. in the image editor
+The Orientation tag (x0112) is on the seventh line. The last four bytes should be 1 (x00000001) but show 0 (x00000000). All we need to do is change the 397,305th byte to x01.
+
+Visual and byte comparison show that the files are the same.
+~~~
+$ compare -metric pae example.tiff example_broken_fixed.tiff :null
+~~~
+~~~
+0 (0)%
+~~~
+~~~
+$ cmp example.tiff example_broken_fixed.tiff
+~~~
+~~~
+0
+~~~
