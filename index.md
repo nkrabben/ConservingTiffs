@@ -93,6 +93,7 @@ ICC Profile (34675) UNDEFINED (7) 3144<00 00 0xc 0x48 0x4c 0x69 0x6e 0x6f 0x2 0x
 ~~~
 
 Let's walk through `tiffdump`'s output.
+
 * Line 1 - file name
 * Line 2 - file format information, the "I'm a TIFF!"
 * Line 3 - How many bytes until the first Image File Directory (IFD) begins and how many bytes until the next IFD. This file only has one image and IFD.
@@ -154,6 +155,7 @@ Visually, these are still the same image, but from a preservation point of view,
 ## Conserving a TIFF
 
 In the middle of a stream of TIFFs produced by a digitization project, seemingly random files began failing on ingest. Our process creates derivative access images during ingest. When it failed, we logged the following error.
+
 ~~~
 convert: example_broken.tiff: Bad value 0 for "Orientation" tag. `_TIFFVSetField' @ error/tiff.c/TIFFErrors/557.
 ~~~
@@ -167,22 +169,27 @@ It's still not clear what caused this error. It's tempting to tell everyone that
 Regardless, we would like to fix these images, or rather, we would like to conserve these images. We could create visually identical TIFFs by opening and saving them in an image editor, but that would be akin to repairing a torn parchment page in a book by replacing it with a photocopy on modern paper. I'd prefer to surgically edit the single broken value.
 
 One option to edit only the metadata is `exiftool`.
+
 ~~~
 $ exiftool -Orientation=x01 -n example_broken.tiff -o example_broken_exiftool.tiff
 ~~~
+
 We can see that we've fixed the tag by comparing the results of `tiffdump` for each file, but if we compare the byte stream of the repaired file with the unbroken file byte streams with `cmp`, it's not the same.
+
 ~~~
 $ cmp example.tiff example_broken_exiftool.tiff
 ~~~
 ~~~
 example.tiff example_broken_exiftool.tiff differ: char 6, line 1
 ~~~
+
 In addition to writing the metadata, `exiftool` is rewriting other parts of the data in the file. These rewrites are not always predictable. In my tests, I discovered one file where `exiftool` added a space into the value of the software tag, ie. "Seashore  0.1.9" instead of "Seashore 0.1.9". That example is both harmless and concerning.
 
 I haven't found any other tools that perform the surgical edit that I want, so the only way I can make the change I want to make is with a hex editor.
 
 ### TIFF Tag Byte Code
 Inside a TIFF, tags are stored as 12 bytes. There are 400,586 bytes in example_broken.tiff. Finding the right twelve to fix requires three pieces of information from `tiffdump`.
+
 ~~~
 example.tiff:
 Magic: 0x4d4d <big-endian> Version: 0x2a <ClassicTIFF>
@@ -191,6 +198,7 @@ Directory 0: offset 397220 (0x60fa4) next 0 (0)
 Orientation (274) SHORT (3) 1<1>
 ...
 ~~~
+
 1. The tag ID number (274) will be the first two bytes of the tag, converted into hex notation.
 2. The directory IFD offset (397220) is where the first byte of the entire IFD is.
 3. Big-endian means that values will be written big to small instead of small to big. In this case, 274 is represented as x0112. In a little-endian file, 274 would be represented as x1201.
@@ -212,6 +220,7 @@ Opening example_broken.tiff in a hex editor and using these three pieces of info
 I've hidden the values of bytes 397,210-397,220. The first two bytes of the IFD, x000e = 14, indicate the total number of tags (14). From the second line onward, each line shows twelve bytes, a complete tag.
 
 The twelve bytes of a TIFF tag are structured like this.
+
 * Byte 1-2 - Tag ID
 * Byte 3-4 - Data Type of tag value
 * Byte 5-7 - Number of tag values
@@ -220,6 +229,7 @@ The twelve bytes of a TIFF tag are structured like this.
 The Orientation tag (x0112) is on the seventh line. The last four bytes should be 1 (x00000001) but show 0 (x00000000). All we need to do is change the 397,305th byte to x01.
 
 Visual and byte comparison show that the files are the same.
+
 ~~~
 $ compare -metric pae example.tiff example_broken_fixed.tiff :null
 ~~~
@@ -232,3 +242,10 @@ $ cmp example.tiff example_broken_fixed.tiff
 ~~~
 0
 ~~~
+
+Success! But not a very scaleable one.
+
+## Conclusion
+This was an exploration of what conservation for digital objects might look like. And at least at first glance, it looks a lot like physical conservation. It needs deep knowledge of the object, command of very specialized tools, and documentation of the actions performed. Most of all, it's expensive in terms of time, if not money.
+
+Let me know if there are other ways to accomplish this type of work.
