@@ -9,7 +9,7 @@
 title: Conserving TIFFs
 email: nickkrabbenhoeft@nypl.org
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "http://nkrabben.github.io/tifftime" # the base hostname & protocol for your site
+url: {{ site.github.url }} # the base hostname & protocol for your site
 twitter_username: nkrabben
 github_username:  nkrabben
 
